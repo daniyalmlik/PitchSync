@@ -1,0 +1,6 @@
+@PitchSync.MatchService_HostAddress = http://localhost:5264
+
+GET {{PitchSync.MatchService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
