@@ -11,7 +11,7 @@ public sealed class RoomAccessExceptionFilter : IExceptionFilter
         if (context.Exception is not RoomAccessDeniedException ex)
             return;
 
-        context.Result = new ObjectResult(new { message = ex.Message })
+        context.Result = new ObjectResult(new { error = ex.Message })
         {
             StatusCode = StatusCodes.Status403Forbidden
         };

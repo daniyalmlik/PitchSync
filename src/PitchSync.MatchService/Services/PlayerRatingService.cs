@@ -8,14 +8,18 @@ namespace PitchSync.MatchService.Services;
 public sealed class PlayerRatingService : IPlayerRatingService
 {
     private readonly MatchDbContext _db;
+    private readonly IRoomAuthorizationService _auth;
 
-    public PlayerRatingService(MatchDbContext db)
+    public PlayerRatingService(MatchDbContext db, IRoomAuthorizationService auth)
     {
         _db = db;
+        _auth = auth;
     }
 
     public async Task<PlayerRatingResponse?> RatePlayerAsync(Guid roomId, string playerName, string team, decimal rating, string userId, CancellationToken ct = default)
     {
+        await _auth.EnsureCommentatorAsync(roomId, userId, ct);
+
         var roomExists = await _db.MatchRooms.AnyAsync(r => r.Id == roomId, ct);
         if (!roomExists)
             return null;

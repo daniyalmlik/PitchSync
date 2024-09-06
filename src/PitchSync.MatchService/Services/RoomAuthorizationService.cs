@@ -19,6 +19,19 @@ public sealed class RoomAuthorizationService : IRoomAuthorizationService
         => await _db.RoomParticipants
                     .FirstOrDefaultAsync(p => p.MatchRoomId == roomId && p.UserId == userId, ct);
 
+    public async Task<RoomRole?> GetRoleAsync(Guid roomId, string userId, CancellationToken ct = default)
+    {
+        var participant = await GetParticipantAsync(roomId, userId, ct);
+        return participant?.Role;
+    }
+
+    public async Task EnsureParticipantAsync(Guid roomId, string userId, CancellationToken ct = default)
+    {
+        var participant = await GetParticipantAsync(roomId, userId, ct);
+        if (participant is null)
+            throw new RoomAccessDeniedException("You are not a participant in this room.");
+    }
+
     public async Task EnsureHostAsync(Guid roomId, string userId, CancellationToken ct = default)
     {
         var participant = await GetParticipantAsync(roomId, userId, ct);
