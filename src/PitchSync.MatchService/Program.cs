@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PitchSync.MatchService.Data;
 using PitchSync.MatchService.Filters;
+using PitchSync.MatchService.Hubs;
 using PitchSync.MatchService.Services;
 using PitchSync.Shared.Configuration;
 using System.Text;
@@ -23,6 +24,15 @@ builder.Services.AddDbContext<MatchDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         sql => sql.EnableRetryOnFailure(maxRetryCount: 5)));
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy =>
+        policy
+            .WithOrigins("http://localhost:4200", "http://localhost:5000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials()));
 
 // ── Authentication / JWT (consumer only — never issues tokens) ────────────────
 builder.Services.AddAuthentication(options =>
@@ -63,6 +73,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // ── Application Services ─────────────────────────────────────────────────────
+builder.Services.AddSingleton<IPresenceTracker, PresenceTracker>();
 builder.Services.AddScoped<IRoomAuthorizationService, RoomAuthorizationService>();
 builder.Services.AddScoped<IMatchRoomService, MatchRoomService>();
 builder.Services.AddScoped<IMatchEventService, MatchEventService>();
@@ -72,6 +83,9 @@ builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 // ── Controllers + Global Exception Filter ────────────────────────────────────
 builder.Services.AddControllers(options =>
     options.Filters.Add<RoomAccessExceptionFilter>());
+
+// ── SignalR ───────────────────────────────────────────────────────────────────
+builder.Services.AddSignalR().AddMessagePackProtocol();
 
 // ── Health Checks ─────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks()
@@ -89,10 +103,12 @@ if (app.Environment.IsDevelopment())
     db.Database.Migrate();
 }
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<MatchHub>("/hubs/match");
 app.MapHealthChecks("/healthz");
 
 app.Run();

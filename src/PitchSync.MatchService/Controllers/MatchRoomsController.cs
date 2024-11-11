@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using PitchSync.MatchService.Hubs;
 using PitchSync.MatchService.Services;
 using PitchSync.Shared.DTOs;
 using PitchSync.Shared.Enums;
@@ -13,10 +15,14 @@ namespace PitchSync.MatchService.Controllers;
 public sealed class MatchRoomsController : ControllerBase
 {
     private readonly IMatchRoomService _rooms;
+    private readonly IHubContext<MatchHub> _hub;
+    private readonly IPresenceTracker _presence;
 
-    public MatchRoomsController(IMatchRoomService rooms)
+    public MatchRoomsController(IMatchRoomService rooms, IHubContext<MatchHub> hub, IPresenceTracker presence)
     {
         _rooms = rooms;
+        _hub = hub;
+        _presence = presence;
     }
 
     [HttpPost]
@@ -75,6 +81,10 @@ public sealed class MatchRoomsController : ControllerBase
         if (participant is null)
             return BadRequest(new { message = "Room not found or invalid invite code." });
 
+        var group = $"match:{id}";
+        await _hub.Clients.Group(group).SendAsync("ParticipantJoined", id.ToString(), participant, ct);
+        await _hub.Clients.Group(group).SendAsync("PresenceUpdate", id.ToString(), _presence.GetOnlineUsers(id.ToString()), ct);
+
         return Ok(participant);
     }
 
@@ -83,7 +93,15 @@ public sealed class MatchRoomsController : ControllerBase
     {
         var (userId, _) = GetUserClaims();
         var left = await _rooms.LeaveAsync(id, userId, ct);
-        return left ? NoContent() : NotFound();
+
+        if (!left)
+            return NotFound();
+
+        var group = $"match:{id}";
+        await _hub.Clients.Group(group).SendAsync("ParticipantLeft", id.ToString(), userId, ct);
+        await _hub.Clients.Group(group).SendAsync("PresenceUpdate", id.ToString(), _presence.GetOnlineUsers(id.ToString()), ct);
+
+        return NoContent();
     }
 
     [HttpPatch("{id:guid}/status")]
