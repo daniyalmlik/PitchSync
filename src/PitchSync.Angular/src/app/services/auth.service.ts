@@ -45,6 +45,10 @@ export class AuthService {
     return localStorage.getItem(TOKEN_KEY);
   }
 
+  getCurrentUser(): UserInfo | null {
+    return this._currentUser$.value;
+  }
+
   isAuthenticated(): boolean {
     const token = this.getToken();
     const expires = localStorage.getItem(EXPIRES_KEY);

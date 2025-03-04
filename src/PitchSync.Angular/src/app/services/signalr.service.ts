@@ -1,31 +1,39 @@
 import { Injectable, inject } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { MessagePackHubProtocol } from '@microsoft/signalr-protocol-msgpack';
-import { Subject, Observable } from 'rxjs';
+import { Subject, Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { MatchEventResponse } from '../models/event.model';
-import { OnlineUserDto, MatchStatus } from '../models/match.model';
+import { OnlineUserDto, ParticipantDto, MatchStatus } from '../models/match.model';
 import { PlayerRatingResponse } from '../models/rating.model';
+
+export type ConnectionState = 'connected' | 'reconnecting' | 'disconnected';
 
 @Injectable({ providedIn: 'root' })
 export class SignalrService {
   private readonly auth = inject(AuthService);
   private connection: signalR.HubConnection | null = null;
 
+  private readonly _connectionState$ = new BehaviorSubject<ConnectionState>('disconnected');
   private readonly _presenceUpdate$ = new Subject<{ roomId: string; onlineUsers: OnlineUserDto[] }>();
   private readonly _eventPosted$ = new Subject<MatchEventResponse>();
   private readonly _scoreUpdated$ = new Subject<{ roomId: string; homeScore: number; awayScore: number }>();
   private readonly _statusChanged$ = new Subject<{ roomId: string; status: MatchStatus }>();
   private readonly _ratingsUpdated$ = new Subject<{ roomId: string; allRatings: PlayerRatingResponse[] }>();
   private readonly _eventDeleted$ = new Subject<string>();
+  private readonly _participantJoined$ = new Subject<{ roomId: string; participant: ParticipantDto }>();
+  private readonly _participantLeft$ = new Subject<{ roomId: string; userId: string }>();
 
+  readonly connectionState$: Observable<ConnectionState> = this._connectionState$.asObservable();
   readonly presenceUpdate$: Observable<{ roomId: string; onlineUsers: OnlineUserDto[] }> = this._presenceUpdate$.asObservable();
   readonly eventPosted$: Observable<MatchEventResponse> = this._eventPosted$.asObservable();
   readonly scoreUpdated$: Observable<{ roomId: string; homeScore: number; awayScore: number }> = this._scoreUpdated$.asObservable();
   readonly statusChanged$: Observable<{ roomId: string; status: MatchStatus }> = this._statusChanged$.asObservable();
   readonly ratingsUpdated$: Observable<{ roomId: string; allRatings: PlayerRatingResponse[] }> = this._ratingsUpdated$.asObservable();
   readonly eventDeleted$: Observable<string> = this._eventDeleted$.asObservable();
+  readonly participantJoined$: Observable<{ roomId: string; participant: ParticipantDto }> = this._participantJoined$.asObservable();
+  readonly participantLeft$: Observable<{ roomId: string; userId: string }> = this._participantLeft$.asObservable();
 
   async connect(roomId: string): Promise<void> {
     await this.disconnect();
@@ -36,11 +44,15 @@ export class SignalrService {
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(url)
       .withHubProtocol(new MessagePackHubProtocol())
-      .withAutomaticReconnect()
+      .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .build();
+
+    this.connection.onreconnecting(() => this._connectionState$.next('reconnecting'));
+    this.connection.onclose(() => this._connectionState$.next('disconnected'));
 
     this.registerHandlers();
     await this.connection.start();
+    this._connectionState$.next('connected');
   }
 
   async disconnect(): Promise<void> {
@@ -48,6 +60,7 @@ export class SignalrService {
       await this.connection.stop();
       this.connection = null;
     }
+    this._connectionState$.next('disconnected');
   }
 
   async postEvent(request: object): Promise<void> {
@@ -95,6 +108,14 @@ export class SignalrService {
 
     this.connection.on('EventDeleted', (eventId: string) => {
       this._eventDeleted$.next(eventId);
+    });
+
+    this.connection.on('ParticipantJoined', (roomId: string, participant: ParticipantDto) => {
+      this._participantJoined$.next({ roomId, participant });
+    });
+
+    this.connection.on('ParticipantLeft', (roomId: string, userId: string) => {
+      this._participantLeft$.next({ roomId, userId });
     });
   }
 }
