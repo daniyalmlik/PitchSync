@@ -155,6 +155,11 @@ export class MatchStateService implements OnDestroy {
     );
   }
 
+  updateLineup(team: 'home' | 'away', players: PlayerLineupDto[]): void {
+    const key = team === 'home' ? 'homeLineup' : 'awayLineup';
+    this.patchRoom(r => ({ ...r, [key]: players }));
+  }
+
   private patchRoom(fn: (r: MatchRoomResponse) => MatchRoomResponse): void {
     const current = this._room$.value;
     if (current) this._room$.next(fn(current));

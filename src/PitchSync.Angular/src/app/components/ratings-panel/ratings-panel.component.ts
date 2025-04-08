@@ -1,89 +1,108 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatTabsModule } from '@angular/material/tabs';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
 import { SignalrService } from '../../services/signalr.service';
 import { PlayerRatingResponse } from '../../models/rating.model';
 import { RoomRole } from '../../models/match.model';
 
+interface RateEvent {
+  playerName: string;
+  team: string;
+  rating: number;
+}
+
 @Component({
   selector: 'app-ratings-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatButtonModule, MatInputModule, MatFormFieldModule],
+  imports: [CommonModule, FormsModule, MatTabsModule, MatSliderModule],
   template: `
-    <div class="ratings-panel">
-      @if (ratings.length === 0) {
-        <p class="empty-msg">No ratings yet</p>
-      } @else {
-        @for (group of teamGroups; track group.team) {
-          <div class="team-section">
-            <div class="team-label">{{ group.team }}</div>
-            @for (r of group.players; track r.playerName) {
-              <div class="rating-row">
-                <span class="player-name">{{ r.playerName }}</span>
-                <div class="rating-right">
-                  <span class="avg-rating" [class]="ratingClass(r.averageRating)">
-                    {{ r.averageRating | number:'1.1-1' }}
-                  </span>
-                  <span class="rating-count">({{ r.ratingCount }})</span>
+    <mat-tab-group>
+      <mat-tab [label]="homeTeam || 'Home'">
+        <div class="ratings-tab">
+          <ng-container *ngTemplateOutlet="playersBlock; context: { players: homePlayers }">
+          </ng-container>
+        </div>
+      </mat-tab>
+      <mat-tab [label]="awayTeam || 'Away'">
+        <div class="ratings-tab">
+          <ng-container *ngTemplateOutlet="playersBlock; context: { players: awayPlayers }">
+          </ng-container>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
 
-                  @if (canRate) {
-                    <input
-                      type="number" min="1" max="10"
-                      class="rating-input"
-                      [(ngModel)]="draftRatings[r.playerName + '|' + r.team]"
-                      placeholder="{{ r.myRating ?? '–' }}"
-                    />
-                    <button mat-stroked-button class="rate-btn"
-                            (click)="submitRating(r)"
-                            [disabled]="!isValidRating(r.playerName, r.team)">
-                      Rate
-                    </button>
-                  } @else if (r.myRating != null) {
-                    <span class="my-rating">Yours: {{ r.myRating }}</span>
-                  }
-                </div>
+    <ng-template #playersBlock let-players="players">
+      @if (players.length === 0) {
+        <p class="empty-msg">No players rated yet</p>
+      }
+      @for (r of players; track r.playerName) {
+        <div class="rating-row" [class.motm-row]="isMoTM(r)">
+          <div class="name-cell">
+            @if (isMoTM(r)) {
+              <span class="motm-star" title="Man of the Match">⭐</span>
+            }
+            <span class="player-name">{{ r.playerName }}</span>
+          </div>
+
+          <div class="rating-cell">
+            <span class="avg-badge" [class]="ratingClass(r.averageRating)">
+              {{ r.averageRating | number:'1.1-1' }}
+            </span>
+            <span class="rating-count">{{ r.ratingCount }} ratings</span>
+
+            @if (canRate) {
+              <div class="slider-wrap">
+                <mat-slider min="1" max="10" step="0.5" class="rating-slider">
+                  <input
+                    matSliderThumb
+                    [ngModel]="sliderValue(r)"
+                    (ngModelChange)="onSliderChange(r, $event)"
+                  />
+                </mat-slider>
+                <span class="slider-label">{{ sliderValue(r) | number:'1.1-1' }}</span>
               </div>
+            } @else if (r.myRating != null) {
+              <span class="my-rating">Your rating: {{ r.myRating }}</span>
             }
           </div>
-        }
+        </div>
       }
-    </div>
+    </ng-template>
   `,
   styles: [`
-    .ratings-panel { padding: 4px 0; }
-    .empty-msg { color: rgba(0,0,0,.4); font-size: 13px; margin: 8px 0; }
-    .team-section { margin-bottom: 12px; }
-    .team-label {
-      font-size: 11px; font-weight: 700; letter-spacing: .6px;
-      text-transform: uppercase; color: #1976d2; margin-bottom: 4px;
-    }
+    .ratings-tab { padding: 8px 4px; }
+    .empty-msg { color: rgba(0,0,0,.4); font-size: 13px; margin: 12px 0; text-align: center; }
     .rating-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 6px 4px; border-bottom: 1px solid #f0f0f0;
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 8px 8px; border-radius: 6px;
+      border-bottom: 1px solid #f0f0f0;
     }
-    .player-name { font-size: 13px; font-weight: 500; flex: 1; }
-    .rating-right { display: flex; align-items: center; gap: 6px; }
-    .avg-rating {
-      font-size: 15px; font-weight: 700; min-width: 32px; text-align: center;
+    .motm-row { background: #fffde7; border-left: 3px solid #fbc02d; }
+    .name-cell { display: flex; align-items: center; gap: 6px; }
+    .motm-star { font-size: 14px; line-height: 1; }
+    .player-name { font-size: 13px; font-weight: 600; }
+    .rating-cell { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .avg-badge {
+      min-width: 36px; height: 26px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; padding: 0 8px;
     }
-    .rating-green { color: #2e7d32; }
-    .rating-yellow { color: #f57f17; }
-    .rating-red { color: #c62828; }
+    .rating-green { background: #c8e6c9; color: #1b5e20; }
+    .rating-yellow { background: #fff9c4; color: #f57f17; }
+    .rating-red { background: #ffcdd2; color: #b71c1c; }
     .rating-count { font-size: 11px; color: rgba(0,0,0,.45); }
+    .slider-wrap { display: flex; align-items: center; gap: 4px; flex: 1; min-width: 140px; }
+    .rating-slider { flex: 1; }
+    .slider-label { font-size: 12px; font-weight: 600; min-width: 28px; color: #555; }
     .my-rating { font-size: 11px; color: rgba(0,0,0,.5); }
-    .rating-input {
-      width: 44px; border: 1px solid #ccc; border-radius: 4px;
-      padding: 3px 6px; font-size: 13px; text-align: center; outline: none;
-    }
-    .rating-input:focus { border-color: #1976d2; }
-    .rate-btn { min-width: 48px; height: 28px; font-size: 11px; line-height: 28px; padding: 0 8px; }
   `],
 })
-export class RatingsPanelComponent {
+export class RatingsPanelComponent implements OnDestroy {
   @Input() ratings: PlayerRatingResponse[] = [];
   @Input() currentUserRole: RoomRole | null = null;
   @Input() homeTeam = '';
@@ -92,41 +111,69 @@ export class RatingsPanelComponent {
   private readonly signalr = inject(SignalrService);
   private readonly snackBar = inject(MatSnackBar);
 
-  draftRatings: Record<string, number | null> = {};
+  private readonly rateSubject = new Subject<RateEvent>();
+  private readonly rateSub: Subscription;
+
+  draftRatings: Record<string, number> = {};
+
+  constructor() {
+    this.rateSub = this.rateSubject.pipe(
+      debounceTime(500),
+      switchMap(({ playerName, team, rating }) =>
+        this.signalr.ratePlayer(playerName, team, rating)
+      ),
+    ).subscribe({
+      error: () => this.snackBar.open('Failed to submit rating', 'Dismiss', { duration: 3000 }),
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.rateSub.unsubscribe();
+  }
 
   get canRate(): boolean {
     return this.currentUserRole === 'Spectator' || this.currentUserRole === 'Commentator';
   }
 
-  get teamGroups(): { team: string; players: PlayerRatingResponse[] }[] {
-    const teams = [...new Set(this.ratings.map(r => r.team))];
-    return teams.map(team => ({
-      team,
-      players: this.ratings.filter(r => r.team === team),
-    }));
+  get homePlayers(): PlayerRatingResponse[] {
+    return this.ratings
+      .filter(r => r.team.toLowerCase() === this.homeTeam.toLowerCase() || r.team === 'home')
+      .slice()
+      .sort((a, b) => b.averageRating - a.averageRating);
+  }
+
+  get awayPlayers(): PlayerRatingResponse[] {
+    return this.ratings
+      .filter(r => r.team.toLowerCase() === this.awayTeam.toLowerCase() || r.team === 'away')
+      .slice()
+      .sort((a, b) => b.averageRating - a.averageRating);
+  }
+
+  get motmPlayer(): PlayerRatingResponse | null {
+    const allRated = this.ratings.filter(r => r.ratingCount > 0);
+    if (!allRated.length) return null;
+    return allRated.reduce((best, r) => r.averageRating > best.averageRating ? r : best);
+  }
+
+  isMoTM(r: PlayerRatingResponse): boolean {
+    const motm = this.motmPlayer;
+    return motm !== null && motm.playerName === r.playerName && motm.team === r.team;
   }
 
   ratingClass(avg: number): string {
-    if (avg >= 7) return 'rating-green';
-    if (avg >= 5) return 'rating-yellow';
-    return 'rating-red';
+    if (avg >= 7) return 'avg-badge rating-green';
+    if (avg >= 5) return 'avg-badge rating-yellow';
+    return 'avg-badge rating-red';
   }
 
-  isValidRating(playerName: string, team: string): boolean {
-    const val = this.draftRatings[playerName + '|' + team];
-    return val != null && val >= 1 && val <= 10;
-  }
-
-  async submitRating(r: PlayerRatingResponse): Promise<void> {
+  sliderValue(r: PlayerRatingResponse): number {
     const key = r.playerName + '|' + r.team;
-    const rating = this.draftRatings[key];
-    if (rating == null || rating < 1 || rating > 10) return;
+    return this.draftRatings[key] ?? r.myRating ?? 5;
+  }
 
-    try {
-      await this.signalr.ratePlayer(r.playerName, r.team, rating);
-      delete this.draftRatings[key];
-    } catch {
-      this.snackBar.open('Failed to submit rating', 'Dismiss', { duration: 3000 });
-    }
+  onSliderChange(r: PlayerRatingResponse, value: number): void {
+    const key = r.playerName + '|' + r.team;
+    this.draftRatings = { ...this.draftRatings, [key]: value };
+    this.rateSubject.next({ playerName: r.playerName, team: r.team, rating: value });
   }
 }

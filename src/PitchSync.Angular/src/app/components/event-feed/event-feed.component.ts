@@ -33,7 +33,7 @@ const CARD_EVENTS: MatchEventType[] = ['YellowCard', 'RedCard'];
 
             <div class="event-body">
               <div class="event-main">
-                <mat-icon class="event-icon">{{ event.eventType | eventIcon }}</mat-icon>
+                <span class="event-icon">{{ event.eventType | eventIcon }}</span>
                 @if (event.playerName) {
                   <span class="player-name">{{ event.playerName }}</span>
                 }
@@ -99,7 +99,7 @@ const CARD_EVENTS: MatchEventType[] = ['YellowCard', 'RedCard'];
     .badge-gray { background: #9e9e9e; }
     .event-body { flex: 1; min-width: 0; }
     .event-main { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .event-icon { font-size: 18px; width: 18px; height: 18px; opacity: .8; }
+    .event-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
     .player-name { font-weight: 600; font-size: 14px; }
     .secondary { font-size: 13px; color: rgba(0,0,0,.6); }
     .team-tag {

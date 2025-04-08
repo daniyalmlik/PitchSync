@@ -1,163 +1,110 @@
 import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { ApiService } from '../../services/api.service';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { PlayerLineupDto, RoomRole } from '../../models/match.model';
-
-interface DraftPlayer {
-  playerName: string;
-  shirtNumber: number | null;
-  position: string;
-  isStarting: boolean;
-}
+import { MatchStateService } from '../../services/match-state.service';
+import {
+  LineupEditorDialogComponent,
+  LineupEditorDialogData,
+} from '../lineup-editor-dialog/lineup-editor-dialog.component';
 
 @Component({
   selector: 'app-lineup-panel',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, MatTabsModule, MatButtonModule,
-    MatIconModule, MatFormFieldModule, MatInputModule, MatChipsModule,
+    CommonModule, MatTabsModule, MatButtonModule, MatIconModule,
+    MatChipsModule, MatDialogModule,
   ],
   template: `
     <mat-tab-group>
       <mat-tab [label]="homeTeam || 'Home'">
         <div class="lineup-tab">
-          <div class="player-list">
-            @for (p of homeLineup; track p.playerName) {
-              <div class="player-row">
-                @if (p.shirtNumber != null) {
-                  <span class="shirt-num">{{ p.shirtNumber }}</span>
-                }
-                <span class="player-name">{{ p.playerName }}</span>
-                @if (p.position) {
-                  <span class="position">{{ p.position }}</span>
-                }
-                <span class="status-chip" [class.chip-starting]="p.isStarting">
-                  {{ p.isStarting ? 'Starting' : 'Sub' }}
-                </span>
-              </div>
-            }
-            @if (homeLineup.length === 0) {
-              <p class="empty-msg">No players added yet</p>
-            }
-          </div>
-
-          @if (canEdit) {
-            <div class="add-player-form">
-              <h4>Add Player</h4>
-              <div class="add-row">
-                <input class="small-input" type="number" [(ngModel)]="homeForm.shirtNumber"
-                       placeholder="#" style="width:48px" />
-                <input class="small-input flex-grow" [(ngModel)]="homeForm.playerName"
-                       placeholder="Player name" />
-                <input class="small-input" [(ngModel)]="homeForm.position"
-                       placeholder="Pos" style="width:60px" />
-                <label class="toggle-label">
-                  <input type="checkbox" [(ngModel)]="homeForm.isStarting" />
-                  XI
-                </label>
-                <button mat-icon-button color="primary" (click)="addPlayer('home')"
-                        [disabled]="!homeForm.playerName.trim()">
-                  <mat-icon>add</mat-icon>
-                </button>
-              </div>
-              <button mat-stroked-button color="primary" class="save-btn"
-                      (click)="saveLineup('home')" [disabled]="saving">
-                Save Lineup
-              </button>
-            </div>
-          }
+          <ng-container *ngTemplateOutlet="lineupContent; context: { players: homeLineup, team: 'home' }">
+          </ng-container>
         </div>
       </mat-tab>
-
       <mat-tab [label]="awayTeam || 'Away'">
         <div class="lineup-tab">
-          <div class="player-list">
-            @for (p of awayLineup; track p.playerName) {
-              <div class="player-row">
-                @if (p.shirtNumber != null) {
-                  <span class="shirt-num">{{ p.shirtNumber }}</span>
-                }
-                <span class="player-name">{{ p.playerName }}</span>
-                @if (p.position) {
-                  <span class="position">{{ p.position }}</span>
-                }
-                <span class="status-chip" [class.chip-starting]="p.isStarting">
-                  {{ p.isStarting ? 'Starting' : 'Sub' }}
-                </span>
-              </div>
-            }
-            @if (awayLineup.length === 0) {
-              <p class="empty-msg">No players added yet</p>
-            }
-          </div>
-
-          @if (canEdit) {
-            <div class="add-player-form">
-              <h4>Add Player</h4>
-              <div class="add-row">
-                <input class="small-input" type="number" [(ngModel)]="awayForm.shirtNumber"
-                       placeholder="#" style="width:48px" />
-                <input class="small-input flex-grow" [(ngModel)]="awayForm.playerName"
-                       placeholder="Player name" />
-                <input class="small-input" [(ngModel)]="awayForm.position"
-                       placeholder="Pos" style="width:60px" />
-                <label class="toggle-label">
-                  <input type="checkbox" [(ngModel)]="awayForm.isStarting" />
-                  XI
-                </label>
-                <button mat-icon-button color="primary" (click)="addPlayer('away')"
-                        [disabled]="!awayForm.playerName.trim()">
-                  <mat-icon>add</mat-icon>
-                </button>
-              </div>
-              <button mat-stroked-button color="primary" class="save-btn"
-                      (click)="saveLineup('away')" [disabled]="saving">
-                Save Lineup
-              </button>
-            </div>
-          }
+          <ng-container *ngTemplateOutlet="lineupContent; context: { players: awayLineup, team: 'away' }">
+          </ng-container>
         </div>
       </mat-tab>
     </mat-tab-group>
+
+    <ng-template #lineupContent let-players="players" let-team="team">
+      @if (canEdit) {
+        <div class="edit-row">
+          <button mat-stroked-button color="primary" class="edit-btn"
+                  (click)="openEditor(team)">
+            <mat-icon>edit</mat-icon> Edit Lineup
+          </button>
+        </div>
+      }
+
+      @if (starters(players).length > 0) {
+        <div class="section-label">Starting XI</div>
+        @for (p of starters(players); track p.playerName) {
+          <div class="player-row">
+            <span class="shirt-badge">{{ p.shirtNumber ?? '–' }}</span>
+            <span class="player-name">{{ p.playerName }}</span>
+            @if (p.position) {
+              <span class="pos-chip">{{ p.position }}</span>
+            }
+          </div>
+        }
+      }
+
+      @if (subs(players).length > 0) {
+        <div class="section-label subs-label">Subs</div>
+        @for (p of subs(players); track p.playerName) {
+          <div class="player-row sub-row">
+            <span class="shirt-badge shirt-sub">{{ p.shirtNumber ?? '–' }}</span>
+            <span class="player-name">{{ p.playerName }}</span>
+            @if (p.position) {
+              <span class="pos-chip">{{ p.position }}</span>
+            }
+          </div>
+        }
+      }
+
+      @if (players.length === 0) {
+        <p class="empty-msg">No lineup set yet</p>
+      }
+    </ng-template>
   `,
   styles: [`
-    .lineup-tab { padding: 12px 4px; }
-    .player-list { display: flex; flex-direction: column; gap: 4px; min-height: 40px; }
+    .lineup-tab { padding: 10px 4px; }
+    .edit-row { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .edit-btn { height: 32px; font-size: 12px; }
+    .section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .6px;
+      text-transform: uppercase; color: #1976d2;
+      margin: 8px 0 4px; padding: 0 4px;
+    }
+    .subs-label { color: #757575; }
     .player-row {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 8px; border-radius: 4px; background: #f5f5f5;
+      padding: 5px 8px; border-radius: 4px;
+      background: #f5f5f5; margin-bottom: 3px;
     }
-    .shirt-num {
-      min-width: 24px; text-align: center; font-weight: 700;
-      font-size: 12px; color: #555;
+    .sub-row { background: #fafafa; opacity: .85; }
+    .shirt-badge {
+      min-width: 26px; height: 26px; border-radius: 50%;
+      background: #1976d2; color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
     }
-    .player-name { flex: 1; font-size: 14px; font-weight: 500; }
-    .position { font-size: 11px; color: #888; }
-    .status-chip {
+    .shirt-sub { background: #9e9e9e; }
+    .player-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .pos-chip {
       font-size: 10px; padding: 2px 7px; border-radius: 10px;
-      background: #e0e0e0; color: #555; white-space: nowrap;
+      background: #e3f2fd; color: #1565c0; white-space: nowrap;
     }
-    .chip-starting { background: #c8e6c9; color: #1b5e20; }
-    .empty-msg { color: rgba(0,0,0,.4); font-size: 13px; margin: 8px 0; }
-    .add-player-form { margin-top: 12px; }
-    .add-player-form h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; color: #555; }
-    .add-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-    .small-input {
-      border: 1px solid #ccc; border-radius: 4px; padding: 5px 8px;
-      font-size: 13px; outline: none;
-    }
-    .small-input:focus { border-color: #1976d2; }
-    .flex-grow { flex: 1; min-width: 100px; }
-    .toggle-label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
-    .save-btn { margin-top: 8px; }
+    .empty-msg { color: rgba(0,0,0,.4); font-size: 13px; margin: 12px 0; text-align: center; }
   `],
 })
 export class LineupPanelComponent {
@@ -168,50 +115,36 @@ export class LineupPanelComponent {
   @Input() currentUserRole: RoomRole | null = null;
   @Input() roomId = '';
 
-  private readonly api = inject(ApiService);
-  private readonly snackBar = inject(MatSnackBar);
-
-  saving = false;
-
-  homeForm: DraftPlayer = { playerName: '', shirtNumber: null, position: '', isStarting: true };
-  awayForm: DraftPlayer = { playerName: '', shirtNumber: null, position: '', isStarting: true };
+  private readonly dialog = inject(MatDialog);
+  private readonly matchState = inject(MatchStateService);
 
   get canEdit(): boolean {
     return this.currentUserRole === 'Host' || this.currentUserRole === 'Commentator';
   }
 
-  addPlayer(team: 'home' | 'away'): void {
-    const form = team === 'home' ? this.homeForm : this.awayForm;
-    if (!form.playerName.trim()) return;
-
-    const player: PlayerLineupDto = {
-      playerName: form.playerName.trim(),
-      shirtNumber: form.shirtNumber ?? undefined,
-      position: form.position.trim() || undefined,
-      isStarting: form.isStarting,
-    };
-
-    if (team === 'home') {
-      this.homeLineup = [...this.homeLineup, player];
-      this.homeForm = { playerName: '', shirtNumber: null, position: '', isStarting: true };
-    } else {
-      this.awayLineup = [...this.awayLineup, player];
-      this.awayForm = { playerName: '', shirtNumber: null, position: '', isStarting: true };
-    }
+  starters(players: PlayerLineupDto[]): PlayerLineupDto[] {
+    return players.filter(p => p.isStarting);
   }
 
-  async saveLineup(team: 'home' | 'away'): Promise<void> {
-    if (!this.roomId) return;
-    this.saving = true;
+  subs(players: PlayerLineupDto[]): PlayerLineupDto[] {
+    return players.filter(p => !p.isStarting);
+  }
+
+  openEditor(team: 'home' | 'away'): void {
     const players = team === 'home' ? this.homeLineup : this.awayLineup;
-    const teamName = team === 'home' ? this.homeTeam : this.awayTeam;
-    try {
-      await this.api.setLineup(this.roomId, teamName, players).toPromise();
-      this.snackBar.open('Lineup saved', '', { duration: 2000 });
-    } catch {
-      this.snackBar.open('Failed to save lineup', 'Dismiss', { duration: 3000 });
-    } finally {
-      this.saving = false;
-    }
+    const teamLabel = team === 'home' ? (this.homeTeam || 'Home') : (this.awayTeam || 'Away');
+
+    const data: LineupEditorDialogData = { roomId: this.roomId, team, teamLabel, players };
+    const ref = this.dialog.open(LineupEditorDialogComponent, {
+      data,
+      width: '540px',
+      maxHeight: '90vh',
+    });
+
+    ref.afterClosed().subscribe((saved: PlayerLineupDto[] | null) => {
+      if (saved) {
+        this.matchState.updateLineup(team, saved);
+      }
+    });
   }
 }
