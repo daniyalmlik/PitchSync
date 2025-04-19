@@ -19,7 +19,7 @@ public sealed class JwtTokenServiceTests
 
     private static JwtTokenService CreateService(int expiryMinutes = 60)
     {
-        var config = new JwtConfig(SecretKey, Issuer, Audience, expiryMinutes);
+        var config = new JwtConfig { SecretKey = SecretKey, Issuer = Issuer, Audience = Audience, ExpiryMinutes = expiryMinutes };
         var options = Options.Create(config);
         return new JwtTokenService(options);
     }
