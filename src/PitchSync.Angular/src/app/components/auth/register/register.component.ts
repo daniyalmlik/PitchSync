@@ -62,7 +62,7 @@ import { AuthService } from '../../../services/auth.service';
 
             <mat-form-field appearance="outline">
               <mat-label>Favourite Team (optional)</mat-label>
-              <input matInput formControlName="favoriteTeam" placeholder="e.g. Arsenal" />
+              <input matInput formControlName="favoriteTeam" placeholder="e.g. Real Madrid" />
             </mat-form-field>
 
             <mat-card-actions>

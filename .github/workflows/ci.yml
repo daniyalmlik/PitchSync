@@ -1,0 +1,125 @@
+name: CI — Build, Test & Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  identity-service:
+    name: Identity Service — Build & Test
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Test_Password123!
+        ports:
+          - '1433:1433'
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Test_Password123! -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - name: Run Identity Service tests
+        run: dotnet test src/PitchSync.Tests/IdentityService.Tests -c Release --logger trx --results-directory TestResults
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PitchSync_IdentityTest;User Id=sa;Password=Test_Password123!;TrustServerCertificate=true"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: identity-test-results
+          path: TestResults/
+
+  match-service:
+    name: Match Service — Build & Test
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Test_Password123!
+        ports:
+          - '1434:1433'
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Test_Password123! -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet restore
+      - run: dotnet build --no-restore -c Release
+      - name: Run Match Service tests
+        run: dotnet test src/PitchSync.Tests/MatchService.Tests -c Release --logger trx --results-directory TestResults
+        env:
+          ConnectionStrings__DefaultConnection: "Server=localhost,1434;Database=PitchSync_MatchTest;User Id=sa;Password=Test_Password123!;TrustServerCertificate=true"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: match-test-results
+          path: TestResults/
+
+  angular:
+    name: Angular — Lint, Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: cd src/PitchSync.Angular && npm ci
+      - run: cd src/PitchSync.Angular && npx ng lint
+      - run: cd src/PitchSync.Angular && npx ng test --watch=false --browsers=ChromeHeadless
+      - run: cd src/PitchSync.Angular && npx ng build --configuration=production
+      - uses: actions/upload-artifact@v4
+        with:
+          name: angular-build
+          path: src/PitchSync.Angular/dist/
+
+  codeql:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: csharp, javascript
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+      - run: dotnet build -c Release
+      - uses: github/codeql-action/analyze@v3
+
+  docker:
+    name: Docker — Build & Verify
+    runs-on: ubuntu-latest
+    needs: [identity-service, match-service, angular]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Gateway image
+        run: docker build -t pitchsync-gateway:ci -f src/PitchSync.Gateway/Dockerfile .
+      - name: Build Identity Service image
+        run: docker build -t pitchsync-identity:ci -f src/PitchSync.IdentityService/Dockerfile .
+      - name: Build Match Service image
+        run: docker build -t pitchsync-match:ci -f src/PitchSync.MatchService/Dockerfile .
+      - name: Build Angular image
+        run: docker build -t pitchsync-angular:ci src/PitchSync.Angular

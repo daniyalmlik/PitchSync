@@ -5,10 +5,10 @@ namespace PitchSync.Shared.DTOs;
 public record PostEventRequest(
     int Minute,
     MatchEventType EventType,
-    string? Team,
-    string? PlayerName,
-    string? SecondaryPlayerName,
-    string? Description);
+    string? Team = null,
+    string? PlayerName = null,
+    string? SecondaryPlayerName = null,
+    string? Description = null);
 
 public record MatchEventResponse(
     Guid Id,

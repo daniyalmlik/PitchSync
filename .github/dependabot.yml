@@ -1,0 +1,36 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /src/PitchSync.Angular
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /src/PitchSync.Gateway
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /src/PitchSync.IdentityService
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /src/PitchSync.MatchService
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /src/PitchSync.Angular
+    schedule:
+      interval: weekly

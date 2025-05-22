@@ -1,0 +1,88 @@
+services:
+  identity-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Identity_Dev123!"
+    ports:
+      - "1433:1433"
+    volumes:
+      - identity_db_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Identity_Dev123! -C -Q "SELECT 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  match-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Match_Dev123!"
+    ports:
+      - "1434:1433"
+    volumes:
+      - match_db_data:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Match_Dev123! -C -Q "SELECT 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: src/PitchSync.IdentityService/Dockerfile
+    ports:
+      - "5010:5010"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=identity-db;Database=PitchSync_IdentityDb;User Id=sa;Password=Identity_Dev123!;TrustServerCertificate=true
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=PitchSync
+      - JwtSettings__Audience=PitchSync
+      - JwtSettings__ExpiryMinutes=480
+    depends_on:
+      identity-db:
+        condition: service_healthy
+
+  match-service:
+    build:
+      context: .
+      dockerfile: src/PitchSync.MatchService/Dockerfile
+    ports:
+      - "5020:5020"
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=match-db;Database=PitchSync_MatchDb;User Id=sa;Password=Match_Dev123!;TrustServerCertificate=true
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=PitchSync
+      - JwtSettings__Audience=PitchSync
+      - JwtSettings__ExpiryMinutes=480
+    depends_on:
+      match-db:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: .
+      dockerfile: src/PitchSync.Gateway/Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:5010
+      - ReverseProxy__Clusters__match-cluster__Destinations__destination1__Address=http://match-service:5020
+    depends_on:
+      - identity-service
+      - match-service
+
+  angular:
+    build:
+      context: src/PitchSync.Angular
+      dockerfile: Dockerfile
+    ports:
+      - "4200:80"
+    depends_on:
+      - gateway
+
+volumes:
+  identity_db_data:
+  match_db_data:
