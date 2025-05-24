@@ -1,0 +1,42 @@
+name: Build and Push Images
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: pitchsyncacr.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push identity-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/PitchSync.IdentityService/Dockerfile
+          push: true
+          tags: pitchsyncacr.azurecr.io/identity-service:latest
+
+      - name: Build and push match-service
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/PitchSync.MatchService/Dockerfile
+          push: true
+          tags: pitchsyncacr.azurecr.io/match-service:latest
+
+      - name: Build and push gateway
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: src/PitchSync.Gateway/Dockerfile
+          push: true
+          tags: pitchsyncacr.azurecr.io/gateway:latest

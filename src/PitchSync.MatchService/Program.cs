@@ -26,10 +26,14 @@ builder.Services.AddDbContext<MatchDbContext>(options =>
         sql => sql.EnableRetryOnFailure(maxRetryCount: 5)));
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
+var corsOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? ["http://localhost:4200", "http://localhost:5000"];
+
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
         policy
-            .WithOrigins("http://localhost:4200", "http://localhost:5000")
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()));
