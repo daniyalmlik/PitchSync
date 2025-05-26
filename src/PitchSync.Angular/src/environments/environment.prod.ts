@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  gatewayUrl: 'https://<your-gateway>.azurecontainerapps.io'
+  gatewayUrl: 'https://gateway.greenplant-350a4002.germanywestcentral.azurecontainerapps.io'
 };
