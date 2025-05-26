@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: src/PitchSync.IdentityService/Dockerfile
     ports:
-      - "5010:5010"
+      - "5010:8080"
     environment:
       - ConnectionStrings__DefaultConnection=Server=identity-db;Database=PitchSync_IdentityDb;User Id=sa;Password=Identity_Dev123!;TrustServerCertificate=true
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
@@ -50,7 +50,7 @@ services:
       context: .
       dockerfile: src/PitchSync.MatchService/Dockerfile
     ports:
-      - "5020:5020"
+      - "5020:8080"
     environment:
       - ConnectionStrings__DefaultConnection=Server=match-db;Database=PitchSync_MatchDb;User Id=sa;Password=Match_Dev123!;TrustServerCertificate=true
       - JwtSettings__SecretKey=${JWT_SECRET_KEY}
@@ -66,10 +66,10 @@ services:
       context: .
       dockerfile: src/PitchSync.Gateway/Dockerfile
     ports:
-      - "5000:5000"
+      - "5000:8080"
     environment:
-      - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:5010
-      - ReverseProxy__Clusters__match-cluster__Destinations__destination1__Address=http://match-service:5020
+      - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-service:8080
+      - ReverseProxy__Clusters__match-cluster__Destinations__destination1__Address=http://match-service:8080
     depends_on:
       - identity-service
       - match-service
