@@ -1,9 +1,13 @@
+import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { AuthService } from './auth.service';
 import { UserInfo } from '../models/user.model';
+
+@Component({ template: '', standalone: true })
+class StubLoginComponent {}
 
 const TOKEN_KEY = 'pitchsync_token';
 const EXPIRES_KEY = 'pitchsync_expires';
@@ -24,7 +28,7 @@ describe('AuthService', () => {
     localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: 'login', component: StubLoginComponent }]),
         provideHttpClient(),
         provideHttpClientTesting(),
       ],
