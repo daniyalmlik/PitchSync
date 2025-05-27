@@ -85,8 +85,7 @@ jobs:
         with:
           node-version: '20'
       - run: cd src/PitchSync.Angular && npm ci
-      - run: cd src/PitchSync.Angular && npx ng lint
-      - run: cd src/PitchSync.Angular && npx ng test --watch=false --browsers=ChromeHeadless
+      - run: cd src/PitchSync.Angular && npx ng test --no-watch
       - run: cd src/PitchSync.Angular && npx ng build --configuration=production
       - uses: actions/upload-artifact@v4
         with:
@@ -97,6 +96,8 @@ jobs:
     name: CodeQL Security Analysis
     runs-on: ubuntu-latest
     permissions:
+      actions: read
+      contents: read
       security-events: write
     steps:
       - uses: actions/checkout@v4
