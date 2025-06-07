@@ -40,3 +40,29 @@ jobs:
           file: src/PitchSync.Gateway/Dockerfile
           push: true
           tags: pitchsyncacr.azurecr.io/gateway:latest
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy identity-service
+        run: |
+          az containerapp update \
+            --name identity-service \
+            --resource-group pitchsync-rg \
+            --image pitchsyncacr.azurecr.io/identity-service:latest
+
+      - name: Deploy match-service
+        run: |
+          az containerapp update \
+            --name match-service \
+            --resource-group pitchsync-rg \
+            --image pitchsyncacr.azurecr.io/match-service:latest
+
+      - name: Deploy gateway
+        run: |
+          az containerapp update \
+            --name gateway \
+            --resource-group pitchsync-rg \
+            --image pitchsyncacr.azurecr.io/gateway:latest
