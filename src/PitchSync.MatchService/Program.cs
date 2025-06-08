@@ -100,9 +100,8 @@ builder.Services.AddHealthChecks()
 // ── Pipeline ─────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<MatchDbContext>();
     db.Database.Migrate();
 }

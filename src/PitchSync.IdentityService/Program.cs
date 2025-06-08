@@ -80,10 +80,9 @@ builder.Services.AddControllers();
 // ── Pipeline ─────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-// Auto-migrate in Development so docker-compose up just works
-if (app.Environment.IsDevelopment())
+// Auto-migrate on startup
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
     db.Database.Migrate();
 }
