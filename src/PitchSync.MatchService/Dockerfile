@@ -14,10 +14,10 @@ COPY src/PitchSync.MatchService/ src/PitchSync.MatchService/
 RUN dotnet publish src/PitchSync.MatchService/PitchSync.MatchService.csproj \
     -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 COPY --from=build /app/publish .
 
@@ -28,6 +28,6 @@ ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost:8080/healthz || exit 1
+    CMD curl -f http://localhost:8080/healthz || exit 1
 
 ENTRYPOINT ["dotnet", "PitchSync.MatchService.dll"]

@@ -102,7 +102,10 @@ export class RegisterComponent {
       next: () => this.router.navigate(['/matches']),
       error: (err) => {
         this.loading = false;
-        const msg = err?.error?.message ?? 'Registration failed. Please try again.';
+        const errors: string[] | undefined = err?.error?.errors;
+        const msg = errors?.length
+          ? errors[0]
+          : (err?.error?.message ?? 'Registration failed. Please try again.');
         this.snackBar.open(msg, 'Close', { duration: 5000 });
       }
     });
