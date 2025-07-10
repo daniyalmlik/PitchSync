@@ -37,10 +37,9 @@ import { InviteCodeDialogComponent } from '../invite-code-dialog/invite-code-dia
           <ng-template matTabContent>
             <div class="filter-row">
               <mat-form-field appearance="outline" class="search-field">
-                <mat-label>Search</mat-label>
                 <mat-icon matPrefix>search</mat-icon>
                 <input matInput [(ngModel)]="searchQuery" (ngModelChange)="onSearchChange()"
-                       placeholder="Team or title..." />
+                       placeholder="Search rooms..." />
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="status-field">
@@ -64,7 +63,7 @@ import { InviteCodeDialogComponent } from '../invite-code-dialog/invite-code-dia
                   <mat-card class="room-card" (click)="openRoom(room)">
                     <mat-card-content>
                       <div class="room-status-row">
-                        <span class="status-chip" [class]="'chip-' + room.status.toLowerCase()">
+                        <span class="status-chip" [class]="'chip-' + (room.status + '').toLowerCase()">
                           {{ room.status }}
                         </span>
                         <span class="participant-count">
@@ -104,7 +103,7 @@ import { InviteCodeDialogComponent } from '../invite-code-dialog/invite-code-dia
                   <mat-card class="room-card" (click)="openRoom(room)">
                     <mat-card-content>
                       <div class="room-status-row">
-                        <span class="status-chip" [class]="'chip-' + room.status.toLowerCase()">
+                        <span class="status-chip" [class]="'chip-' + (room.status + '').toLowerCase()">
                           {{ room.status }}
                         </span>
                         <span class="participant-count">
@@ -221,7 +220,11 @@ export class MatchBrowserComponent implements OnInit {
     this.api.getPublicRooms(1, 50, this.searchQuery || undefined, this.statusFilter || undefined)
       .subscribe({
         next: rooms => { this.publicRooms = rooms; this.loadingPublic = false; },
-        error: () => { this.loadingPublic = false; },
+        error: () => {
+          this.loadingPublic = false;
+          this.snackBar.open('Failed to load rooms. Please try again.', 'Retry', { duration: 5000 })
+            .onAction().subscribe(() => this.loadPublic());
+        },
       });
   }
 
@@ -230,7 +233,10 @@ export class MatchBrowserComponent implements OnInit {
     this.api.getMyRooms(1, 50)
       .subscribe({
         next: rooms => { this.myRooms = rooms; this.loadingMy = false; },
-        error: () => { this.loadingMy = false; },
+        error: () => {
+          this.loadingMy = false;
+          this.snackBar.open('Failed to load your rooms.', 'Dismiss', { duration: 4000 });
+        },
       });
   }
 

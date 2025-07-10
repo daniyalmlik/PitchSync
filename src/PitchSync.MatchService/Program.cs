@@ -86,7 +86,9 @@ builder.Services.AddScoped<IPlayerRatingService, PlayerRatingService>();
 
 // ── Controllers + Global Exception Filter ────────────────────────────────────
 builder.Services.AddControllers(options =>
-    options.Filters.Add<RoomAccessExceptionFilter>());
+    options.Filters.Add<RoomAccessExceptionFilter>())
+.AddJsonOptions(o =>
+    o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 
 // ── SignalR ───────────────────────────────────────────────────────────────────
 builder.Services.AddSignalR().AddMessagePackProtocol();
@@ -100,10 +102,16 @@ builder.Services.AddHealthChecks()
 // ── Pipeline ─────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<MatchDbContext>();
     db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    var startupLogger = app.Services.GetRequiredService<ILogger<Program>>();
+    startupLogger.LogError(ex, "Database migration failed — service will continue but DB operations may fail");
 }
 
 app.UseCors();
