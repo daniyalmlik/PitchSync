@@ -26,9 +26,9 @@ import { AuthService } from '../../../services/auth.service';
       <mat-card class="auth-card">
         <mat-card-header>
           <mat-card-title>Sign In</mat-card-title>
-          <mat-card-subtitle>Welcome back to PitchSync</mat-card-subtitle>
+          <mat-card-subtitle style="margin-top:8px">Welcome back to PitchSync</mat-card-subtitle>
         </mat-card-header>
-        <mat-card-content>
+        <mat-card-content style="margin-top:12px">
           <form [formGroup]="form" (ngSubmit)="onSubmit()">
             <mat-form-field appearance="outline">
               <mat-label>Email</mat-label>

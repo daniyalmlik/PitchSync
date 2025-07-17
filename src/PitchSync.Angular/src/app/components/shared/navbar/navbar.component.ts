@@ -21,8 +21,8 @@ import { AuthService } from '../../../services/auth.service';
   ],
   template: `
     <mat-toolbar color="primary">
-      <a routerLink="/matches" style="text-decoration:none;color:inherit;font-weight:700;font-size:1.2rem">
-        PitchSync ⚽
+      <a routerLink="/matches" style="text-decoration:none;color:inherit;font-weight:700;font-size:1.2rem;display:flex;align-items:center">
+        <img src="favicon.ico" alt="PitchSync" style="width:24px;height:24px;margin-right:8px"> PitchSync
       </a>
       <span class="spacer"></span>
 
@@ -36,8 +36,6 @@ import { AuthService } from '../../../services/auth.service';
         <button mat-icon-button (click)="auth.logout()" title="Sign out">
           <mat-icon>logout</mat-icon>
         </button>
-      } @else {
-        <button mat-button routerLink="/login">Sign In</button>
       }
     </mat-toolbar>
   `
