@@ -91,6 +91,17 @@ jobs:
         with:
           name: angular-build
           path: src/PitchSync.Angular/dist/
+      - name: Deploy to Azure Blob Storage
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: azure/CLI@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            az storage blob upload-batch \
+              --connection-string "${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+              --source src/PitchSync.Angular/dist/PitchSync.Angular/browser \
+              --destination '$web' \
+              --overwrite true
 
   codeql:
     name: CodeQL Security Analysis
