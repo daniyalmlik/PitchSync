@@ -7,7 +7,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { OwlDateTimeModule, OwlNativeDateTimeModule } from '@danielmoncada/angular-datetime-picker';
 import { ApiService } from '../../services/api.service';
 
 @Component({
@@ -16,7 +18,8 @@ import { ApiService } from '../../services/api.service';
   imports: [
     CommonModule, ReactiveFormsModule, RouterLink,
     MatCardModule, MatFormFieldModule, MatInputModule,
-    MatButtonModule, MatSlideToggleModule,
+    MatButtonModule, MatSlideToggleModule, MatIconModule,
+    OwlDateTimeModule, OwlNativeDateTimeModule,
   ],
   template: `
     <div class="create-page">
@@ -30,7 +33,7 @@ import { ApiService } from '../../services/api.service';
 
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Room Title</mat-label>
-              <input matInput formControlName="title" placeholder="e.g. Premier League MD32" />
+              <input matInput formControlName="title" placeholder="e.g. Premier League" />
               @if (form.controls.title.invalid && form.controls.title.touched) {
                 <mat-error>Title is required</mat-error>
               }
@@ -60,12 +63,18 @@ import { ApiService } from '../../services/api.service';
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Kick-off Time</mat-label>
-              <input matInput type="datetime-local" formControlName="kickoffTime" />
-              @if (form.controls.kickoffTime.invalid && form.controls.kickoffTime.touched) {
-                <mat-error>Kick-off time is required</mat-error>
+              <mat-label>Kick-off Date & Time</mat-label>
+              <input matInput [owlDateTimeTrigger]="dtPicker"
+                     [owlDateTime]="dtPicker"
+                     formControlName="kickoffDateTime"
+                     placeholder="Select date & time"
+                     readonly />
+              <mat-icon matIconSuffix [owlDateTimeTrigger]="dtPicker" style="cursor:pointer">event</mat-icon>
+              @if (form.controls.kickoffDateTime.invalid && form.controls.kickoffDateTime.touched) {
+                <mat-error>Kick-off date & time is required</mat-error>
               }
             </mat-form-field>
+            <owl-date-time #dtPicker pickerType="both"></owl-date-time>
 
             <div class="toggle-row">
               <mat-slide-toggle formControlName="isPublic">
@@ -101,6 +110,7 @@ import { ApiService } from '../../services/api.service';
     .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
   `],
 })
+
 export class CreateMatchComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
@@ -114,7 +124,7 @@ export class CreateMatchComponent {
     homeTeam: ['', Validators.required],
     awayTeam: ['', Validators.required],
     competition: [''],
-    kickoffTime: ['', Validators.required],
+    kickoffDateTime: [null as Date | null, Validators.required],
     isPublic: [true],
   });
 
@@ -123,13 +133,16 @@ export class CreateMatchComponent {
     this.submitting = true;
 
     const v = this.form.getRawValue();
+    const kickoffTime = (v.kickoffDateTime as Date).toISOString();
+    
+
     try {
       const room = await this.api.createRoom({
         title: v.title!,
         homeTeam: v.homeTeam!,
         awayTeam: v.awayTeam!,
         competition: v.competition || undefined,
-        kickoffTime: new Date(v.kickoffTime!).toISOString(),
+        kickoffTime,
         isPublic: v.isPublic!,
       }).toPromise();
 

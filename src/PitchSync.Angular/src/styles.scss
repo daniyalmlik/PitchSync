@@ -55,3 +55,97 @@ body {
   gap: 8px;
   padding: 16px;
 }
+
+/* ── Owl DateTime Picker – match Material violet theme ── */
+.owl-dt-container {
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
+  border: none;
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 6%, white);
+}
+
+/* Header bar */
+.owl-dt-calendar-table .owl-dt-calendar-header {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+/* Selected day circle */
+.owl-dt-calendar-table .owl-dt-calendar-cell-selected {
+  background-color: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  border-radius: 50%;
+}
+
+/* Today highlight */
+.owl-dt-calendar-table .owl-dt-calendar-cell-today:not(.owl-dt-calendar-cell-selected) {
+  border-color: var(--mat-sys-primary);
+}
+
+/* Hover on cells */
+.owl-dt-calendar-table .owl-dt-calendar-cell-content:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  border-radius: 50%;
+}
+
+/* Month/year header button */
+.owl-dt-calendar .owl-dt-calendar-control .owl-dt-calendar-control-button {
+  color: var(--mat-sys-primary);
+  font-weight: 500;
+}
+
+/* Nav arrows */
+.owl-dt-calendar .owl-dt-calendar-control .owl-dt-calendar-control-arrow-button {
+  color: var(--mat-sys-primary);
+}
+.owl-dt-calendar .owl-dt-calendar-control .owl-dt-calendar-control-arrow-button:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  border-radius: 50%;
+}
+
+/* Timer (hour/minute spinners) */
+.owl-dt-timer-box .owl-dt-timer-input {
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--mat-sys-on-surface);
+  border: none;
+  border-bottom: 2px solid var(--mat-sys-primary);
+  border-radius: 0;
+  background: transparent;
+  width: 64px;
+  text-align: center;
+}
+
+.owl-dt-timer-divider {
+  color: var(--mat-sys-on-surface);
+  font-size: 2rem;
+  font-weight: 300;
+}
+
+.owl-dt-timer-box .owl-dt-control-arrow-button {
+  color: var(--mat-sys-primary);
+}
+.owl-dt-timer-box .owl-dt-control-arrow-button:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+  border-radius: 50%;
+}
+
+/* Footer buttons (Cancel / Set) */
+.owl-dt-container-buttons {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.owl-dt-container-control-button {
+  color: var(--mat-sys-primary) !important;
+  font-weight: 500 !important;
+  font-family: Roboto, "Helvetica Neue", sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.875rem !important;
+}
+
+.owl-dt-container-control-button:hover {
+  background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent) !important;
+  border-radius: 4px;
+}

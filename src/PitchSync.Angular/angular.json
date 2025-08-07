@@ -31,7 +31,8 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              "node_modules/@danielmoncada/angular-datetime-picker/assets/style/picker.min.css"
             ]
           },
           "configurations": {

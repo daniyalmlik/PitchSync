@@ -1,7 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { timeout } from 'rxjs/operators';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -179,8 +181,10 @@ import { InviteCodeDialogComponent } from '../invite-code-dialog/invite-code-dia
 export class MatchBrowserComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
   publicRooms: MatchRoomSummary[] = [];
   myRooms: MatchRoomSummary[] = [];
@@ -200,7 +204,12 @@ export class MatchBrowserComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    this.loadPublic();
+    const resolved: MatchRoomSummary[] = this.route.snapshot.data['rooms'] ?? [];
+    if (resolved.length > 0) {
+      this.publicRooms = resolved;
+    } else {
+      this.loadPublic();
+    }
     this.loadMy();
   }
 
@@ -218,6 +227,7 @@ export class MatchBrowserComponent implements OnInit {
   loadPublic(): void {
     this.loadingPublic = true;
     this.api.getPublicRooms(1, 50, this.searchQuery || undefined, this.statusFilter || undefined)
+      .pipe(timeout(15_000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: rooms => { this.publicRooms = rooms; this.loadingPublic = false; },
         error: () => {
@@ -231,6 +241,7 @@ export class MatchBrowserComponent implements OnInit {
   loadMy(): void {
     this.loadingMy = true;
     this.api.getMyRooms(1, 50)
+      .pipe(timeout(10_000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: rooms => { this.myRooms = rooms; this.loadingMy = false; },
         error: () => {
