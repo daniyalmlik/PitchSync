@@ -1,7 +1,5 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnDestroy } from '@angular/core';
 import { CommonModule, AsyncPipe } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { combineLatest } from 'rxjs';
@@ -20,16 +18,12 @@ import { PresenceComponent } from '../presence/presence.component';
   standalone: true,
   imports: [
     CommonModule, AsyncPipe,
-    MatProgressSpinnerModule, MatIconModule, MatButtonModule,
+    MatIconModule, MatButtonModule,
     ScoreboardComponent, EventFeedComponent, EventFormComponent,
     LineupPanelComponent, RatingsPanelComponent, PresenceComponent,
   ],
   template: `
-    @if (loading) {
-      <div class="loading-center">
-        <mat-spinner diameter="48"></mat-spinner>
-      </div>
-    } @else if (vm$ | async; as vm) {
+    @if (vm$ | async; as vm) {
       <div class="room-layout">
 
         <!-- Connection state indicator -->
@@ -151,15 +145,11 @@ import { PresenceComponent } from '../presence/presence.component';
     }
   `],
 })
-export class MatchRoomComponent implements OnInit, OnDestroy {
+export class MatchRoomComponent implements OnDestroy {
   private readonly matchState = inject(MatchStateService);
   private readonly signalr = inject(SignalrService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
 
   readonly connectionState$ = this.signalr.connectionState$;
-
-  loading = true;
 
   readonly vm$ = combineLatest([
     this.matchState.currentRoom$,
@@ -174,17 +164,6 @@ export class MatchRoomComponent implements OnInit, OnDestroy {
       room, events, homeLineup, awayLineup, onlineUsers, ratings, role,
     }))
   );
-
-  async ngOnInit(): Promise<void> {
-    const id = this.route.snapshot.params['id'] as string;
-    try {
-      await this.matchState.loadRoom(id);
-    } catch {
-      await this.router.navigate(['/matches']);
-    } finally {
-      this.loading = false;
-    }
-  }
 
   async ngOnDestroy(): Promise<void> {
     await this.matchState.unload();

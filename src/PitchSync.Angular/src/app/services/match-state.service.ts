@@ -47,11 +47,12 @@ export class MatchStateService implements OnDestroy {
     const room = await this.api.getRoom(id).toPromise();
     this._room$.next(room ?? null);
 
-    const ratings = await this.api.getRatings(id).toPromise();
-    this._ratings$.next(ratings ?? []);
+    // Ratings and SignalR connect in the background — don't block the loading state
+    this.api.getRatings(id).subscribe(ratings => this._ratings$.next(ratings ?? []));
 
-    await this.signalr.connect(id);
-    this.subscribeToSignalR();
+    this.signalr.connect(id)
+      .then(() => this.subscribeToSignalR())
+      .catch(() => { /* stays disconnected; connection indicator shows Offline */ });
   }
 
   async unload(): Promise<void> {

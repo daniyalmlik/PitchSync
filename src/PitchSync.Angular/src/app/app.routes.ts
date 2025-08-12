@@ -6,13 +6,14 @@ import { MatchBrowserComponent } from './components/match-browser/match-browser.
 import { CreateMatchComponent } from './components/create-match/create-match.component';
 import { MatchRoomComponent } from './components/match-room/match-room.component';
 import { matchesResolver } from './resolvers/matches.resolver';
+import { matchRoomResolver } from './resolvers/match-room.resolver';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'matches', component: MatchBrowserComponent, canActivate: [authGuard], resolve: { rooms: matchesResolver } },
   { path: 'matches/new', component: CreateMatchComponent, canActivate: [authGuard] },
-  { path: 'matches/:id', component: MatchRoomComponent, canActivate: [authGuard] },
+  { path: 'matches/:id', component: MatchRoomComponent, canActivate: [authGuard], resolve: { _: matchRoomResolver } },
   { path: '', redirectTo: 'matches', pathMatch: 'full' },
   { path: '**', redirectTo: 'matches' },
 ];
