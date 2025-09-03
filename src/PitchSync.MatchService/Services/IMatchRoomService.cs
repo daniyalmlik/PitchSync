@@ -15,4 +15,8 @@ public interface IMatchRoomService
     Task<MatchRoomResponse?> UpdateScoreAsync(Guid roomId, int homeScore, int awayScore, string userId, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid roomId, string userId, CancellationToken ct = default);
     Task<ParticipantDto?> PromoteParticipantAsync(Guid roomId, string targetUserId, RoomRole newRole, string requestingUserId, CancellationToken ct = default);
+    Task<RoomInviteDto?> InviteParticipantAsync(Guid roomId, string targetUserId, string displayName, string hostUserId, CancellationToken ct = default);
+    Task<IReadOnlyList<RoomInviteDto>> GetPendingInvitesAsync(string userId, CancellationToken ct = default);
+    Task<(Guid MatchRoomId, ParticipantDto Participant)?> AcceptInviteAsync(Guid inviteId, string userId, CancellationToken ct = default);
+    Task<bool> DeclineInviteAsync(Guid inviteId, string userId, CancellationToken ct = default);
 }

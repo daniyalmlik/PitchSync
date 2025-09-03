@@ -49,6 +49,7 @@ public sealed class MatchHub : Hub
 
         var group = Group(roomIdStr);
         await Groups.AddToGroupAsync(Context.ConnectionId, group);
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"user:{UserId}");
         Context.Items["roomId"] = roomIdStr;
 
         _presence.AddConnection(roomIdStr, UserId, DisplayName, FavoriteTeam, Context.ConnectionId);

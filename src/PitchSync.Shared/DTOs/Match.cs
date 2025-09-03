@@ -43,3 +43,4 @@ public record MatchRoomSummary(
 public record JoinMatchRequest(string? InviteCode = null);
 public record UpdateScoreRequest(int HomeScore, int AwayScore);
 public record UpdateStatusRequest(MatchStatus Status);
+public record InviteParticipantRequest(string UserId, string DisplayName);

@@ -84,3 +84,21 @@ export interface SetLineupRequest {
 export interface PromoteParticipantRequest {
   role: RoomRole;
 }
+
+export interface InviteParticipantRequest {
+  userId: string;
+  displayName: string;
+}
+
+export type InviteStatus = 'Pending' | 'Accepted' | 'Declined';
+
+export interface RoomInviteDto {
+  id: string;
+  matchRoomId: string;
+  roomTitle: string;
+  homeTeam: string;
+  awayTeam: string;
+  invitedByDisplayName: string;
+  status: InviteStatus;
+  createdAt: string;
+}

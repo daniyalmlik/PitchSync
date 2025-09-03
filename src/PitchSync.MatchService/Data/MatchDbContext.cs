@@ -9,6 +9,7 @@ public sealed class MatchDbContext : DbContext
 
     public DbSet<MatchRoom> MatchRooms => Set<MatchRoom>();
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
+    public DbSet<RoomInvite> RoomInvites => Set<RoomInvite>();
     public DbSet<MatchEvent> MatchEvents => Set<MatchEvent>();
     public DbSet<PlayerLineup> PlayerLineups => Set<PlayerLineup>();
     public DbSet<PlayerRating> PlayerRatings => Set<PlayerRating>();
@@ -87,6 +88,28 @@ public sealed class MatchDbContext : DbContext
             entity.HasOne(l => l.MatchRoom)
                   .WithMany(r => r.PlayerLineups)
                   .HasForeignKey(l => l.MatchRoomId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── RoomInvite ───────────────────────────────────────────────────────
+        builder.Entity<RoomInvite>(entity =>
+        {
+            entity.HasKey(i => i.Id);
+
+            entity.Property(i => i.RoomTitle).IsRequired().HasMaxLength(200);
+            entity.Property(i => i.HomeTeam).IsRequired().HasMaxLength(100);
+            entity.Property(i => i.AwayTeam).IsRequired().HasMaxLength(100);
+            entity.Property(i => i.InvitedUserId).IsRequired();
+            entity.Property(i => i.InvitedDisplayName).IsRequired().HasMaxLength(100);
+            entity.Property(i => i.InvitedByUserId).IsRequired();
+            entity.Property(i => i.InvitedByDisplayName).IsRequired().HasMaxLength(100);
+            entity.Property(i => i.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+
+            entity.HasIndex(i => new { i.InvitedUserId, i.Status });
+
+            entity.HasOne(i => i.MatchRoom)
+                  .WithMany()
+                  .HasForeignKey(i => i.MatchRoomId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 

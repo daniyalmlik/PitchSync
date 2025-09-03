@@ -128,6 +128,52 @@ public sealed class MatchRoomsController : ControllerBase
         return participant is null ? NotFound() : Ok(participant);
     }
 
+    [HttpPost("{id:guid}/invite")]
+    public async Task<IActionResult> InviteParticipant(Guid id, [FromBody] InviteParticipantRequest request, CancellationToken ct)
+    {
+        var (userId, _) = GetUserClaims();
+        var invite = await _rooms.InviteParticipantAsync(id, request.UserId, request.DisplayName, userId, ct);
+
+        if (invite is null)
+            return Conflict(new { message = "User is already a participant in this room." });
+
+        await _hub.Clients.Group($"user:{request.UserId}").SendAsync("InviteReceived", invite, ct);
+
+        return Ok(invite);
+    }
+
+    [HttpGet("invites")]
+    public async Task<IActionResult> GetMyInvites(CancellationToken ct)
+    {
+        var (userId, _) = GetUserClaims();
+        var invites = await _rooms.GetPendingInvitesAsync(userId, ct);
+        return Ok(invites);
+    }
+
+    [HttpPost("invites/{inviteId:guid}/accept")]
+    public async Task<IActionResult> AcceptInvite(Guid inviteId, CancellationToken ct)
+    {
+        var (userId, _) = GetUserClaims();
+        var result = await _rooms.AcceptInviteAsync(inviteId, userId, ct);
+
+        if (result is null)
+            return NotFound();
+
+        var (matchRoomId, participant) = result.Value;
+        var group = $"match:{matchRoomId}";
+        await _hub.Clients.Group(group).SendAsync("ParticipantJoined", matchRoomId.ToString(), participant, ct);
+
+        return Ok(new { matchRoomId, participant });
+    }
+
+    [HttpPost("invites/{inviteId:guid}/decline")]
+    public async Task<IActionResult> DeclineInvite(Guid inviteId, CancellationToken ct)
+    {
+        var (userId, _) = GetUserClaims();
+        var ok = await _rooms.DeclineInviteAsync(inviteId, userId, ct);
+        return ok ? NoContent() : NotFound();
+    }
+
     private (string userId, string displayName) GetUserClaims()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)

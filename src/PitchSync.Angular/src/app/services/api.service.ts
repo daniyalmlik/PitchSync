@@ -6,7 +6,8 @@ import { LoginRequest, RegisterRequest, TokenResponse, UserInfo, UpdateProfileRe
 import {
   CreateMatchRequest, MatchRoomResponse, MatchRoomSummary,
   JoinMatchRequest, UpdateScoreRequest, UpdateStatusRequest,
-  ParticipantDto, PlayerLineupDto, SetLineupRequest, PromoteParticipantRequest, MatchStatus
+  ParticipantDto, PlayerLineupDto, SetLineupRequest, PromoteParticipantRequest,
+  InviteParticipantRequest, MatchStatus, RoomInviteDto
 } from '../models/match.model';
 import { PostEventRequest, MatchEventResponse } from '../models/event.model';
 import { RatePlayerRequest, PlayerRatingResponse } from '../models/rating.model';
@@ -89,6 +90,24 @@ export class ApiService {
 
   promoteParticipant(roomId: string, userId: string, body: PromoteParticipantRequest): Observable<ParticipantDto> {
     return this.http.patch<ParticipantDto>(`${this.base}/api/matches/${roomId}/participants/${userId}/role`, body);
+  }
+
+  inviteParticipant(roomId: string, body: InviteParticipantRequest): Observable<RoomInviteDto> {
+    return this.http.post<RoomInviteDto>(`${this.base}/api/matches/${roomId}/invite`, body);
+  }
+
+  getPendingInvites(): Observable<RoomInviteDto[]> {
+    return this.http.get<RoomInviteDto[]>(`${this.base}/api/matches/invites`);
+  }
+
+  acceptInvite(inviteId: string): Observable<{ matchRoomId: string; participant: ParticipantDto }> {
+    return this.http.post<{ matchRoomId: string; participant: ParticipantDto }>(
+      `${this.base}/api/matches/invites/${inviteId}/accept`, {}
+    );
+  }
+
+  declineInvite(inviteId: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/api/matches/invites/${inviteId}/decline`, {});
   }
 
   // --- Events ---

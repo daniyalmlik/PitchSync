@@ -5,7 +5,7 @@ import { Subject, Observable, BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { AuthService } from './auth.service';
 import { MatchEventResponse } from '../models/event.model';
-import { OnlineUserDto, ParticipantDto, MatchStatus } from '../models/match.model';
+import { OnlineUserDto, ParticipantDto, MatchStatus, RoomInviteDto } from '../models/match.model';
 import { PlayerRatingResponse } from '../models/rating.model';
 
 export type ConnectionState = 'connected' | 'reconnecting' | 'disconnected';
@@ -24,6 +24,7 @@ export class SignalrService {
   private readonly _eventDeleted$ = new Subject<string>();
   private readonly _participantJoined$ = new Subject<{ roomId: string; participant: ParticipantDto }>();
   private readonly _participantLeft$ = new Subject<{ roomId: string; userId: string }>();
+  private readonly _inviteReceived$ = new Subject<RoomInviteDto>();
 
   readonly connectionState$: Observable<ConnectionState> = this._connectionState$.asObservable();
   readonly presenceUpdate$: Observable<{ roomId: string; onlineUsers: OnlineUserDto[] }> = this._presenceUpdate$.asObservable();
@@ -34,6 +35,7 @@ export class SignalrService {
   readonly eventDeleted$: Observable<string> = this._eventDeleted$.asObservable();
   readonly participantJoined$: Observable<{ roomId: string; participant: ParticipantDto }> = this._participantJoined$.asObservable();
   readonly participantLeft$: Observable<{ roomId: string; userId: string }> = this._participantLeft$.asObservable();
+  readonly inviteReceived$: Observable<RoomInviteDto> = this._inviteReceived$.asObservable();
 
   async connect(roomId: string): Promise<void> {
     await this.disconnect();
@@ -116,6 +118,10 @@ export class SignalrService {
 
     this.connection.on('ParticipantLeft', (roomId: string, userId: string) => {
       this._participantLeft$.next({ roomId, userId });
+    });
+
+    this.connection.on('InviteReceived', (invite: RoomInviteDto) => {
+      this._inviteReceived$.next(invite);
     });
   }
 }

@@ -258,6 +258,118 @@ public sealed class MatchRoomService : IMatchRoomService
         return new ParticipantDto(participant.UserId, participant.DisplayName, participant.Role, participant.JoinedAt);
     }
 
+    public async Task<RoomInviteDto?> InviteParticipantAsync(Guid roomId, string targetUserId, string displayName, string hostUserId, CancellationToken ct = default)
+    {
+        await _auth.EnsureHostAsync(roomId, hostUserId, ct);
+
+        var room = await _db.MatchRooms
+            .Include(r => r.Participants)
+            .FirstOrDefaultAsync(r => r.Id == roomId, ct);
+
+        if (room is null)
+            return null;
+
+        // Already a participant — no invite needed
+        if (room.Participants.Any(p => p.UserId == targetUserId))
+            return null;
+
+        // Return existing pending invite if one already exists
+        var existingInvite = await _db.RoomInvites
+            .FirstOrDefaultAsync(i => i.MatchRoomId == roomId && i.InvitedUserId == targetUserId && i.Status == InviteStatus.Pending, ct);
+
+        if (existingInvite is not null)
+            return MapInvite(existingInvite);
+
+        var hostParticipant = room.Participants.FirstOrDefault(p => p.UserId == hostUserId);
+        var hostDisplayName = hostParticipant?.DisplayName ?? "Host";
+
+        var invite = new RoomInvite
+        {
+            MatchRoomId = roomId,
+            RoomTitle = room.Title,
+            HomeTeam = room.HomeTeam,
+            AwayTeam = room.AwayTeam,
+            InvitedUserId = targetUserId,
+            InvitedDisplayName = displayName,
+            InvitedByUserId = hostUserId,
+            InvitedByDisplayName = hostDisplayName,
+            Status = InviteStatus.Pending,
+        };
+
+        _db.RoomInvites.Add(invite);
+        await _db.SaveChangesAsync(ct);
+
+        return MapInvite(invite);
+    }
+
+    public async Task<IReadOnlyList<RoomInviteDto>> GetPendingInvitesAsync(string userId, CancellationToken ct = default)
+    {
+        var invites = await _db.RoomInvites
+            .Where(i => i.InvitedUserId == userId && i.Status == InviteStatus.Pending)
+            .OrderByDescending(i => i.CreatedAt)
+            .ToListAsync(ct);
+
+        return invites.Select(MapInvite).ToList();
+    }
+
+    public async Task<(Guid MatchRoomId, ParticipantDto Participant)?> AcceptInviteAsync(Guid inviteId, string userId, CancellationToken ct = default)
+    {
+        var invite = await _db.RoomInvites
+            .FirstOrDefaultAsync(i => i.Id == inviteId && i.InvitedUserId == userId && i.Status == InviteStatus.Pending, ct);
+
+        if (invite is null)
+            return null;
+
+        invite.Status = InviteStatus.Accepted;
+
+        // Avoid duplicate participant if already joined via invite code or direct join
+        var alreadyJoined = await _db.RoomParticipants
+            .AnyAsync(p => p.MatchRoomId == invite.MatchRoomId && p.UserId == userId, ct);
+
+        ParticipantDto participantDto;
+
+        if (alreadyJoined)
+        {
+            var existing = await _db.RoomParticipants
+                .FirstAsync(p => p.MatchRoomId == invite.MatchRoomId && p.UserId == userId, ct);
+            participantDto = new ParticipantDto(existing.UserId, existing.DisplayName, existing.Role, existing.JoinedAt);
+        }
+        else
+        {
+            var participant = new RoomParticipant
+            {
+                MatchRoomId = invite.MatchRoomId,
+                UserId = userId,
+                DisplayName = invite.InvitedDisplayName,
+                Role = RoomRole.Spectator,
+                JoinedAt = DateTime.UtcNow,
+            };
+            _db.RoomParticipants.Add(participant);
+            participantDto = new ParticipantDto(participant.UserId, participant.DisplayName, participant.Role, participant.JoinedAt);
+        }
+
+        await _db.SaveChangesAsync(ct);
+
+        return (invite.MatchRoomId, participantDto);
+    }
+
+    public async Task<bool> DeclineInviteAsync(Guid inviteId, string userId, CancellationToken ct = default)
+    {
+        var invite = await _db.RoomInvites
+            .FirstOrDefaultAsync(i => i.Id == inviteId && i.InvitedUserId == userId && i.Status == InviteStatus.Pending, ct);
+
+        if (invite is null)
+            return false;
+
+        invite.Status = InviteStatus.Declined;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private static RoomInviteDto MapInvite(RoomInvite invite) =>
+        new(invite.Id, invite.MatchRoomId, invite.RoomTitle, invite.HomeTeam, invite.AwayTeam,
+            invite.InvitedByDisplayName, invite.Status, invite.CreatedAt);
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task<MatchRoom?> LoadFullRoomAsync(Guid roomId, CancellationToken ct)
