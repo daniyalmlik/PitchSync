@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "dotnet build",
+      "type": "shell",
+      "command": "dotnet build ${workspaceFolder}/PitchSync.sln",
+      "group": { "kind": "build", "isDefault": false },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "ng serve",
+      "type": "shell",
+      "command": "npm run start",
+      "options": { "cwd": "${workspaceFolder}/src/PitchSync.Angular" },
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": {
+          "regexp": "^ERROR in (.+)\\((\\d+),(\\d+)\\):\\s+(.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Building|Generating application",
+          "endsPattern": "compiled successfully|bundle generation complete|failed to compile"
+        }
+      },
+      "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "pre-launch",
+      "dependsOrder": "sequence",
+      "dependsOn": ["dotnet build", "ng serve"],
+      "group": { "kind": "build", "isDefault": false }
+    }
+  ]
+}
