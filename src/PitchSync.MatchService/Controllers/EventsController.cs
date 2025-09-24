@@ -29,9 +29,9 @@ public sealed class EventsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetEvents(
         Guid matchId,
-        [FromQuery] int? page,
-        [FromQuery] int? pageSize,
-        CancellationToken ct)
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken ct = default)
     {
         var events = await _events.GetEventsAsync(matchId, page, pageSize, ct);
         return Ok(events);

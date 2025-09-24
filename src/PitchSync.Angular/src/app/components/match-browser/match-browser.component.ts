@@ -16,7 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ApiService } from '../../services/api.service';
-import { MatchRoomSummary, MatchStatus } from '../../models/match.model';
+import { MatchRoomSummary, MatchStatus, PagedResult } from '../../models/match.model';
 import { InviteCodeDialogComponent } from '../invite-code-dialog/invite-code-dialog.component';
 
 @Component({
@@ -204,9 +204,9 @@ export class MatchBrowserComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    const resolved: MatchRoomSummary[] = this.route.snapshot.data['rooms'] ?? [];
-    if (resolved.length > 0) {
-      this.publicRooms = resolved;
+    const resolved: PagedResult<MatchRoomSummary> | null = this.route.snapshot.data['rooms'] ?? null;
+    if (resolved && resolved.items.length > 0) {
+      this.publicRooms = resolved.items;
     } else {
       this.loadPublic();
     }
@@ -229,7 +229,7 @@ export class MatchBrowserComponent implements OnInit {
     this.api.getPublicRooms(1, 50, this.searchQuery || undefined, this.statusFilter || undefined)
       .pipe(timeout(15_000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: rooms => { this.publicRooms = rooms; this.loadingPublic = false; },
+        next: result => { this.publicRooms = result.items; this.loadingPublic = false; },
         error: () => {
           this.loadingPublic = false;
           this.snackBar.open('Failed to load rooms. Please try again.', 'Retry', { duration: 5000 })
@@ -243,7 +243,7 @@ export class MatchBrowserComponent implements OnInit {
     this.api.getMyRooms(1, 50)
       .pipe(timeout(10_000), takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: rooms => { this.myRooms = rooms; this.loadingMy = false; },
+        next: result => { this.myRooms = result.items; this.loadingMy = false; },
         error: () => {
           this.loadingMy = false;
           this.snackBar.open('Failed to load your rooms.', 'Dismiss', { duration: 4000 });

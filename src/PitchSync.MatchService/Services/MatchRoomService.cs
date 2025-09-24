@@ -78,7 +78,7 @@ public sealed class MatchRoomService : IMatchRoomService
             userId);
     }
 
-    public async Task<List<MatchRoomSummary>> ListPublicAsync(int page, int pageSize, string? search, MatchStatus? status, CancellationToken ct = default)
+    public async Task<PagedResult<MatchRoomSummary>> ListPublicAsync(int page, int pageSize, string? search, MatchStatus? status, CancellationToken ct = default)
     {
         var query = _db.MatchRooms
             .Where(r => r.IsPublic)
@@ -96,7 +96,9 @@ public sealed class MatchRoomService : IMatchRoomService
         if (status.HasValue)
             query = query.Where(r => r.Status == status.Value);
 
-        return await query
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(r => r.KickoffTime)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -111,12 +113,18 @@ public sealed class MatchRoomService : IMatchRoomService
                 r.KickoffTime,
                 r.Participants.Count))
             .ToListAsync(ct);
+
+        return new PagedResult<MatchRoomSummary>(items, total, page, pageSize);
     }
 
-    public async Task<List<MatchRoomSummary>> ListMyRoomsAsync(string userId, int page, int pageSize, CancellationToken ct = default)
+    public async Task<PagedResult<MatchRoomSummary>> ListMyRoomsAsync(string userId, int page, int pageSize, CancellationToken ct = default)
     {
-        return await _db.MatchRooms
-            .Where(r => r.Participants.Any(p => p.UserId == userId))
+        var query = _db.MatchRooms
+            .Where(r => r.Participants.Any(p => p.UserId == userId));
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderByDescending(r => r.KickoffTime)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -131,6 +139,8 @@ public sealed class MatchRoomService : IMatchRoomService
                 r.KickoffTime,
                 r.Participants.Count))
             .ToListAsync(ct);
+
+        return new PagedResult<MatchRoomSummary>(items, total, page, pageSize);
     }
 
     public async Task<ParticipantDto?> JoinAsync(Guid roomId, string userId, string displayName, string? inviteCode, CancellationToken ct = default)
@@ -307,6 +317,7 @@ public sealed class MatchRoomService : IMatchRoomService
         var invites = await _db.RoomInvites
             .Where(i => i.InvitedUserId == userId && i.Status == InviteStatus.Pending)
             .OrderByDescending(i => i.CreatedAt)
+            .Take(100)
             .ToListAsync(ct);
 
         return invites.Select(MapInvite).ToList();

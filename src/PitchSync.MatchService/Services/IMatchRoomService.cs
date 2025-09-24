@@ -7,8 +7,8 @@ public interface IMatchRoomService
 {
     Task<MatchRoomResponse> CreateAsync(CreateMatchRequest request, string userId, string displayName, CancellationToken ct = default);
     Task<MatchRoomResponse?> GetByIdAsync(Guid roomId, string userId, CancellationToken ct = default);
-    Task<List<MatchRoomSummary>> ListPublicAsync(int page, int pageSize, string? search, MatchStatus? status, CancellationToken ct = default);
-    Task<List<MatchRoomSummary>> ListMyRoomsAsync(string userId, int page, int pageSize, CancellationToken ct = default);
+    Task<PagedResult<MatchRoomSummary>> ListPublicAsync(int page, int pageSize, string? search, MatchStatus? status, CancellationToken ct = default);
+    Task<PagedResult<MatchRoomSummary>> ListMyRoomsAsync(string userId, int page, int pageSize, CancellationToken ct = default);
     Task<ParticipantDto?> JoinAsync(Guid roomId, string userId, string displayName, string? inviteCode, CancellationToken ct = default);
     Task<bool> LeaveAsync(Guid roomId, string userId, CancellationToken ct = default);
     Task<MatchRoomResponse?> UpdateStatusAsync(Guid roomId, MatchStatus status, string userId, CancellationToken ct = default);

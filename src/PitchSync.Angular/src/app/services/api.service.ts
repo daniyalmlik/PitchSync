@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { LoginRequest, RegisterRequest, TokenResponse, UserInfo, UpdateProfileRequest } from '../models/user.model';
 import {
-  CreateMatchRequest, MatchRoomResponse, MatchRoomSummary,
+  CreateMatchRequest, MatchRoomResponse, MatchRoomSummary, PagedResult,
   JoinMatchRequest, UpdateScoreRequest, UpdateStatusRequest,
   ParticipantDto, PlayerLineupDto, SetLineupRequest, PromoteParticipantRequest,
   InviteParticipantRequest, MatchStatus, RoomInviteDto
@@ -45,16 +45,16 @@ export class ApiService {
   }
 
   // --- Rooms ---
-  getPublicRooms(page = 1, pageSize = 20, search?: string, status?: MatchStatus): Observable<MatchRoomSummary[]> {
+  getPublicRooms(page = 1, pageSize = 20, search?: string, status?: MatchStatus): Observable<PagedResult<MatchRoomSummary>> {
     let params = new HttpParams().set('page', page).set('pageSize', pageSize);
     if (search) params = params.set('search', search);
     if (status) params = params.set('status', status);
-    return this.http.get<MatchRoomSummary[]>(`${this.base}/api/matches`, { params });
+    return this.http.get<PagedResult<MatchRoomSummary>>(`${this.base}/api/matches`, { params });
   }
 
-  getMyRooms(page = 1, pageSize = 20): Observable<MatchRoomSummary[]> {
+  getMyRooms(page = 1, pageSize = 20): Observable<PagedResult<MatchRoomSummary>> {
     const params = new HttpParams().set('page', page).set('pageSize', pageSize);
-    return this.http.get<MatchRoomSummary[]>(`${this.base}/api/matches/mine`, { params });
+    return this.http.get<PagedResult<MatchRoomSummary>>(`${this.base}/api/matches/mine`, { params });
   }
 
   getRoom(id: string): Observable<MatchRoomResponse> {
@@ -115,11 +115,9 @@ export class ApiService {
     return this.http.post<MatchEventResponse>(`${this.base}/api/matches/${matchId}/events`, body);
   }
 
-  getEvents(matchId: string, page?: number, pageSize?: number): Observable<MatchEventResponse[]> {
-    let params = new HttpParams();
-    if (page) params = params.set('page', page);
-    if (pageSize) params = params.set('pageSize', pageSize);
-    return this.http.get<MatchEventResponse[]>(`${this.base}/api/matches/${matchId}/events`, { params });
+  getEvents(matchId: string, page = 1, pageSize = 50): Observable<PagedResult<MatchEventResponse>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<MatchEventResponse>>(`${this.base}/api/matches/${matchId}/events`, { params });
   }
 
   deleteEvent(matchId: string, eventId: string): Observable<void> {

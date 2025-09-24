@@ -33,6 +33,13 @@ public sealed class MatchDbContext : DbContext
             entity.Property(r => r.IsPublic).HasDefaultValue(true);
             entity.Property(r => r.HomeScore).HasDefaultValue(0);
             entity.Property(r => r.AwayScore).HasDefaultValue(0);
+
+            // Covers the public browse query: WHERE IsPublic = 1 AND Status = ?
+            entity.HasIndex(r => new { r.IsPublic, r.Status })
+                  .HasDatabaseName("IX_MatchRooms_IsPublic_Status");
+
+            entity.HasIndex(r => r.CreatedByUserId)
+                  .HasDatabaseName("IX_MatchRooms_CreatedByUserId");
         });
 
         // ── RoomParticipant ──────────────────────────────────────────────────
@@ -45,6 +52,10 @@ public sealed class MatchDbContext : DbContext
             entity.Property(p => p.JoinedAt).HasDefaultValueSql("GETUTCDATE()");
 
             entity.HasIndex(p => new { p.MatchRoomId, p.UserId }).IsUnique();
+
+            // Covers ListMyRoomsAsync: WHERE UserId = ? (join to find user's rooms)
+            entity.HasIndex(p => p.UserId)
+                  .HasDatabaseName("IX_RoomParticipants_UserId");
 
             entity.HasOne(p => p.MatchRoom)
                   .WithMany(r => r.Participants)

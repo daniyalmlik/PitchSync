@@ -154,12 +154,12 @@ public sealed class MatchEventServiceTests
         );
         await db.SaveChangesAsync();
 
-        var events = await sut.GetEventsAsync(room.Id, null, null, default);
+        var result = await sut.GetEventsAsync(room.Id, ct: default);
 
-        events.Should().HaveCount(3);
-        events[0].Minute.Should().Be(10);
-        events[1].Minute.Should().Be(10);
-        events[1].EventType.Should().Be(MatchEventType.Goal); // later CreatedAt within minute 10
-        events[2].Minute.Should().Be(45);
+        result.Items.Should().HaveCount(3);
+        result.Items[0].Minute.Should().Be(10);
+        result.Items[1].Minute.Should().Be(10);
+        result.Items[1].EventType.Should().Be(MatchEventType.Goal); // later CreatedAt within minute 10
+        result.Items[2].Minute.Should().Be(45);
     }
 }

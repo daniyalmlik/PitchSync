@@ -64,6 +64,7 @@ public sealed class PlayerRatingService : IPlayerRatingService
     {
         var ratings = await _db.PlayerRatings
             .Where(r => r.MatchRoomId == roomId)
+            .Take(500)
             .ToListAsync(ct);
 
         return ratings

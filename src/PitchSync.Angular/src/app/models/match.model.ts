@@ -90,6 +90,15 @@ export interface InviteParticipantRequest {
   displayName: string;
 }
 
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
 export type InviteStatus = 'Pending' | 'Accepted' | 'Declined';
 
 export interface RoomInviteDto {

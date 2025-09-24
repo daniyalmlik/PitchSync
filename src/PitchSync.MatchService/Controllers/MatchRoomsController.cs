@@ -41,6 +41,8 @@ public sealed class MatchRoomsController : ControllerBase
         [FromQuery] MatchStatus? status = null,
         CancellationToken ct = default)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 50);
         var rooms = await _rooms.ListPublicAsync(page, pageSize, search, status, ct);
         return Ok(rooms);
     }
@@ -51,6 +53,8 @@ public sealed class MatchRoomsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
+        page = Math.Max(page, 1);
+        pageSize = Math.Clamp(pageSize, 1, 50);
         var (userId, _) = GetUserClaims();
         var rooms = await _rooms.ListMyRoomsAsync(userId, page, pageSize, ct);
         return Ok(rooms);

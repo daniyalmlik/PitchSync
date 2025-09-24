@@ -59,25 +59,25 @@ public sealed class MatchEventService : IMatchEventService
         return MapToResponse(ev);
     }
 
-    public async Task<List<MatchEventResponse>> GetEventsAsync(Guid roomId, int? page, int? pageSize, CancellationToken ct = default)
+    public async Task<PagedResult<MatchEventResponse>> GetEventsAsync(Guid roomId, int page = 1, int pageSize = 50, CancellationToken ct = default)
     {
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        page = Math.Max(page, 1);
+
         var query = _db.MatchEvents
-            .Where(e => e.MatchRoomId == roomId)
+            .Where(e => e.MatchRoomId == roomId);
+
+        var total = await query.CountAsync(ct);
+
+        var items = await query
             .OrderBy(e => e.Minute)
-            .ThenBy(e => e.CreatedAt);
-
-        if (page.HasValue && pageSize.HasValue)
-        {
-            return await query
-                .Skip((page.Value - 1) * pageSize.Value)
-                .Take(pageSize.Value)
-                .Select(e => MapToResponse(e))
-                .ToListAsync(ct);
-        }
-
-        return await query
+            .ThenBy(e => e.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(e => MapToResponse(e))
             .ToListAsync(ct);
+
+        return new PagedResult<MatchEventResponse>(items, total, page, pageSize);
     }
 
     public async Task<bool> DeleteEventAsync(Guid eventId, string userId, CancellationToken ct = default)
