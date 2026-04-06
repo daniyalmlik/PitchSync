@@ -37,7 +37,7 @@ jobs:
         run: dotnet test src/PitchSync.Tests/IdentityService.Tests -c Release --logger trx --results-directory TestResults
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost,1433;Database=PitchSync_IdentityTest;User Id=sa;Password=Test_Password123!;TrustServerCertificate=true"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: identity-test-results
@@ -70,7 +70,7 @@ jobs:
         run: dotnet test src/PitchSync.Tests/MatchService.Tests -c Release --logger trx --results-directory TestResults
         env:
           ConnectionStrings__DefaultConnection: "Server=localhost,1434;Database=PitchSync_MatchTest;User Id=sa;Password=Test_Password123!;TrustServerCertificate=true"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: match-test-results
@@ -87,7 +87,7 @@ jobs:
       - run: cd src/PitchSync.Angular && npm ci
       - run: cd src/PitchSync.Angular && npx ng test --no-watch
       - run: cd src/PitchSync.Angular && npx ng build --configuration=production
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: angular-build
           path: src/PitchSync.Angular/dist/
