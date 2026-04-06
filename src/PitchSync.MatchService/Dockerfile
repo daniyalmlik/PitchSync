@@ -14,7 +14,7 @@ COPY src/PitchSync.MatchService/ src/PitchSync.MatchService/
 RUN dotnet publish src/PitchSync.MatchService/PitchSync.MatchService.csproj \
     -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
