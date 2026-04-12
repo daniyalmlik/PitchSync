@@ -14,7 +14,7 @@ COPY src/PitchSync.IdentityService/ src/PitchSync.IdentityService/
 RUN dotnet publish src/PitchSync.IdentityService/PitchSync.IdentityService.csproj \
     -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
