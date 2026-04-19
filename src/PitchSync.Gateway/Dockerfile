@@ -14,7 +14,7 @@ COPY src/PitchSync.Gateway/ src/PitchSync.Gateway/
 RUN dotnet publish src/PitchSync.Gateway/PitchSync.Gateway.csproj \
     -c Release -o /app/publish --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS runtime
 WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
